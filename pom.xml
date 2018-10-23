@@ -24,6 +24,13 @@
 		<java.version>1.8</java.version>
 	</properties>
 
+	<repositories>
+		<repository>
+			<id>hue-product</id>
+			<url>http://product-ci.workslan:8081/nexus/content/groups/hue-product</url>
+		</repository>
+	</repositories>
+
 	<dependencies>
 		<!--tag::spring-boot-->
 		<dependency>
@@ -40,6 +47,41 @@
 			<!--<scope>provided</scope>-->
 		</dependency>
 		<!--end::spring-boot-->
+
+		<!--tag::hue-collabo-saas-->
+		<dependency>
+			<groupId>com.worksap.company</groupId>
+			<artifactId>hue-tenant-saas</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>com.worksap.company</groupId>
+			<artifactId>hue-jwt-saas</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>com.worksap.company</groupId>
+			<artifactId>hue-auth-filter-saas</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>com.worksap.company</groupId>
+			<artifactId>hue-rest-client-for-native-config-saas</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+		<!--end::hue-collabo-saas-->
+
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>25.1-jre</version>
+		</dependency>
+
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
