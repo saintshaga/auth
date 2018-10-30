@@ -1,0 +1,118 @@
+@startuml
+namespace authenticationDetails {
+    interface AuthenticationManager {
+    Authentication authenticate(Authentication)
+    }
+
+    class ProviderManager {
+    Authentication authenticate(Authentication)
+    }
+    note left of ProviderManager
+     for each provider, call
+     provider.authenticate if supports.
+     Possible returns in provider:
+     1, Authentication: authenticate success
+     2, null: rest providers will be called
+     3, Throw AccoutStatusException or
+     4, Throw InternalAuthenticationServiceException:
+     the exception will be throw directly
+     5, Throw AuthenticationException:
+     the rest providers will still be called.
+     The exception will be thrown if no providers can authenticate
+    end note
+    note right of ProviderManager
+     add customized provider in configure:
+         @Override
+         protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+             auth.authenticationProvider(authenticationProvider());
+             auth.authenticationProvider(anotherProvider());
+         }
+    end note
+
+    interface AuthenticationProvider {
+    Authentication authenticate(Authentication)
+    boolean supports(Class<?> authentication)
+    }
+
+    abstract class AbstractUserDetailsAuthenticationProvider
+    class DaoAuthenticationProvider
+    note left: call userDetalsService to get user information
+
+    interface UserDetailsService {
+    UserDetails loadUserByUsername(String username)
+    }
+
+    interface UserDetailsManager {
+    void createUser(UserDetails)
+    void updateUser(UserDetails)
+    void deleteUser(UserDetails)
+    }
+
+    class InMemoryUserDetailsManager
+
+    class JdbcDaoImpl
+    class JdbcUserDetailsManager
+    AuthenticationManager <|-- ProviderManager
+    ProviderManager *-- "n" AuthenticationProvider : contains >
+    AuthenticationProvider <|-- AbstractUserDetailsAuthenticationProvider
+    AbstractUserDetailsAuthenticationProvider <|-- DaoAuthenticationProvider
+
+    DaoAuthenticationProvider --> UserDetailsService : uses >
+    UserDetailsService <|-- UserDetailsManager
+    UserDetailsManager <|-- InMemoryUserDetailsManager
+    UserDetailsService <|-- JdbcDaoImpl
+    UserDetailsManager <|-- JdbcUserDetailsManager
+    JdbcDaoImpl <|-- JdbcUserDetailsManager
+}
+
+namespace authenticationFilter{
+    interface Filter
+    abstract class GenericFilterBean
+    abstract class AbstractAuthenticationProcessingFilter
+    class UsernamePasswordAuthenticationFilter
+    class CustomizedAuthenticationFilter{
+    Authentication attemptAuthentication(HttpServletRequest request,
+    HttpServletResponse response)
+    }
+    interface AuthenticationSuccessHandler{
+    void onAuthenticationSuccess(HttpServletRequest request,
+                HttpServletResponse response, Authentication authentication)
+    }
+    interface AuthenticationFailureHandler{
+    void onAuthenticationFailure(HttpServletRequest request,
+                HttpServletResponse response, AuthenticationException exception)
+    }
+
+    Filter <|-- GenericFilterBean
+    GenericFilterBean <|-- AbstractAuthenticationProcessingFilter
+    AbstractAuthenticationProcessingFilter <|-- UsernamePasswordAuthenticationFilter
+    AbstractAuthenticationProcessingFilter <|-- CustomizedAuthenticationFilter
+    AbstractAuthenticationProcessingFilter -right> AuthenticationSuccessHandler : call if authentication success >
+    AbstractAuthenticationProcessingFilter -left> AuthenticationFailureHandler : call if authentication fail(throw AuthenticationException) >
+
+    note bottom of CustomizedAuthenticationFilter
+    Create filter instance:
+        @Bean
+        public CustomizedAuthenticationFilter authenticationFilter() throws Exception {
+            CustomizedAuthenticationFilter filter = new CustomizedAuthenticationFilter(PERMIT_REQUESTS);
+            filter.setAuthenticationFailureHandler(new ChainAuthenticationFailureHandler(failureHandler()));
+            filter.setAuthenticationSuccessHandler(new ChainAuthenticationSuccessHandler(successHandler()));
+            filter.setAuthenticationManager(authenticationManagerBean());
+            return filter;
+        }
+
+    Configure customized filter:
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            http
+                    .authorizeRequests().antMatchers(PERMIT_REQUESTS).permitAll()
+                    .anyRequest().authenticated()
+                     .and()
+                    <font color="red">.addFilterBefore(authenticationFilter(), UsernamePasswordAuthenticationFilter.class)</font>
+            ;
+        }
+    end note
+}
+authenticationFilter.CustomizedAuthenticationFilter -left> authenticationDetails.AuthenticationManager : call authenticationManager to do real authenticate >
+
+@enduml
