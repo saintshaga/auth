@@ -1,127 +1,122 @@
 <html>
 <head>
-<title></title>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<meta name="robots" content="noindex, nofollow">
-<meta name="googlebot" content="noindex, nofollow">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-body {
-	margin: 0;
-	padding: 0;
-}
+	<title></title>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<meta name="robots" content="noindex, nofollow">
+	<meta name="googlebot" content="noindex, nofollow">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+		}
 
-.login-main {
-	height: 100%;
-	background: #00bcd4;
-	background-image: url(../img/bg-login-main.jpg);
-	-webkit-background-size: cover;
-	-moz-background-size: cover;
-	background-size: cover;
-	background-position: center;
-	overflow-y: auto;
-}
+		.login-main {
+			height: 100%;
+			background: #00bcd4;
+			background-image: url(../img/bg-login-main.jpg);
+			-webkit-background-size: cover;
+			-moz-background-size: cover;
+			background-size: cover;
+			background-position: center;
+			overflow-y: auto;
+		}
 
-.login-main-content-header {
-	padding-bottom: 0;
-	padding-top: 80px;
-	margin-top: 104px;
-	position: relative;
-	width: 496px;
-	margin: 0 auto;
-	text-align: center;
-	-webkit-transition: opacity 0.3s ease;
-	-moz-transition: opacity 0.3s ease;
-	-o-transition: opacity 0.3s ease;
-	transition: opacity 0.3s ease;
-	zoom: 1;
-	filter: alpha(opacity = 100);
-	-webkit-opacity: 1;
-	-moz-opacity: 1;
-	opacity: 1;
-}
+		.login-main-content-header {
+			padding-bottom: 0;
+			padding-top: 80px;
+			margin-top: 104px;
+			position: relative;
+			width: 496px;
+			margin: 0 auto;
+			text-align: center;
+			-webkit-transition: opacity 0.3s ease;
+			-moz-transition: opacity 0.3s ease;
+			-o-transition: opacity 0.3s ease;
+			transition: opacity 0.3s ease;
+			zoom: 1;
+			filter: alpha(opacity = 100);
+			-webkit-opacity: 1;
+			-moz-opacity: 1;
+			opacity: 1;
+		}
 
-.login-main-logo-image {
-	width: 496px;
-}
-</style>
-<script>
-function getFromVariable()
-{
-       return window.location.search.substring(6);
-}
+		.login-main-logo-image {
+			width: 496px;
+		}
+	</style>
+	<script>
+		function getFromVariable()
+		{
+			var search = window.location.search.substring(1);
+			return search.substring(search.indexOf('from=') + 5).replace(/&/g, ";");
+		}
 
-function getHost(from)
-{
-       var arrays = from.split('//');
-       return arrays[0] + '//' + arrays[1].split('/')[0];
-}
+		function getHostVariable()
+		{
+			var search = window.location.search.substring(1);
+			if (search.startsWith('host=')) {
+				return search.split('&')[0].substring(5);
+			} else {
+				return null;
+			}
+		}
 
-function getContext(from)
-{
-    var arrays = from.split('//');
-    var index = arrays[1].indexOf('/');
-    return arrays[1].substring(index);
-}
-
-	var collaboPrefix = location.protocol + '//' + document.location.host;
-	var from = getFromVariable();
-    var host = getHost(from);
-    var context = getContext(from);
-	// if (collaboPrefix.indexOf('collabo-dev') >= 0){
-	//   var huePrefix = collaboPrefix.replace('collabo-dev', 'hue').replace(/ess[^.]*\./, '');
-	// } else {
-	//   var huePrefix = 'http://locala-develop.hue.wujiang.name';
-	// }
-//	var huePrefix = 'http://172.26.136.50';
-    var huePrefix = 'https://collabstga-develop.hue.worksap.com';
-	// validate current session token
-	var xhr = new XMLHttpRequest();
-	xhr.open('GET', huePrefix + '/collabo/malphas/check', true);
-	xhr.withCredentials = true;
-	xhr.send();
-	xhr.onreadystatechange = function() {
-		console.log(xhr)	
-		if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 0) {
-			var rep = xhr.responseText;
-			window.location.href = huePrefix + '/collabo/hue/login?nextUrl='
-					+ encodeURIComponent('../../collabo/hue/sso?host=' + host + '&context=' + context);
-		} else if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-			// get session token
-			xhr = new XMLHttpRequest();
-			xhr.open('GET', huePrefix + '/hue/hue/request-token', true);
-			xhr.withCredentials = true;
-			xhr.onreadystatechange = function() {
-				if (xhr.readyState === XMLHttpRequest.DONE
-						&& xhr.status === 200) {
-					var rep = xhr.responseText;
-					console.log(rep);
-					var cookie = rep
-							.match(/com\.worksap\.company\.TOKEN=([\dabcdef-]+)/)[1];
-					if (cookie != null) {
-						document.cookie = "com.worksap.company.TOKEN=" + cookie
-								+ ";path=/;";
-						window.location.href = from;
-					} else {
-						window.location.href = huePrefix
-								+ '/collabo/hue/login?nextUrl='
-								+ encodeURIComponent('../../collabo/hue/sso?host=' + host + '&context=' + context);
+		var collaboPrefix = location.protocol + '//' + document.location.host;
+		var from = getFromVariable();
+		var host = getHostVariable();
+		if (host == null){
+			var huePrefix = collaboPrefix.replace('collab', 'hue').replace(/[^.]*\./, '');
+		} else {
+			var huePrefix = host;
+		}
+		// validate current session token
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', huePrefix + '/collabo/malphas/check', true);
+		xhr.withCredentials = true;
+		xhr.send();
+		xhr.onreadystatechange = function() {
+			console.log(xhr)
+			if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 0) {
+				var rep = xhr.responseText;
+				window.location.href = huePrefix + '/collabo/hue/login?nextUrl='
+						+ encodeURIComponent('../../collabo/hue/sso?from=' + from);
+			} else if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+				// get session token
+				xhr = new XMLHttpRequest();
+				xhr.open('GET', huePrefix + '/hue/hue/request-token', true);
+				xhr.withCredentials = true;
+				xhr.onreadystatechange = function() {
+					if (xhr.readyState === XMLHttpRequest.DONE
+							&& xhr.status === 200) {
+						var rep = xhr.responseText;
+						console.log(rep);
+						var cookie = rep
+								.match(/com\.worksap\.company\.TOKEN=([\dabcdef-]+)/)[1];
+						if (cookie != null) {
+							document.cookie = "com.worksap.company.TOKEN=" + cookie
+									+ ";path=/;";
+							window.location.href = from.replace(/;/g, "&");
+						} else {
+							window.location.href = huePrefix
+									+ '/collabo/hue/login?nextUrl='
+									+ encodeURIComponent('../../collabo/hue/sso?from=' + from);
+						}
 					}
 				}
+				xhr.send();
 			}
-			xhr.send();
 		}
-	}
-</script>
+	</script>
 
 </head>
 <body>
-	<div class="login-main">
-		<div class="login-main-content-header">
-			<img class="login-main-logo-image" height="auto" width="auto" alt=""
-				src="../img/logo-hue-login-main.png">
-		</div>
+<div class="login-main">
+	<div class="login-main-content-header">
+		<img class="login-main-logo-image" height="auto" width="auto" alt=""
+			 src="../img/logo-hue-login-main.png">
 	</div>
+</div>
 
 </body>
 </html>

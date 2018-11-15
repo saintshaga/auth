@@ -1,9 +1,11 @@
 package cn.saintshaga.auth.controller;
 
+import cn.saintshaga.forneus.property.JavaSetting;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.security.web.FilterChainProxy;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.annotation.Resource;
 import javax.servlet.Filter;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by huang on 18-10-15.
@@ -29,6 +32,12 @@ public class SecurityFilterChainInfoController implements ApplicationContextAwar
     @Autowired
     @Resource(name="springSecurityFilterChain")
     private FilterChainProxy filterChainProxy;
+
+    @Value("${hue.native.auth.mode:null}")
+    private String host;
+
+    @Autowired
+    private JavaSetting javaSetting;
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
@@ -49,6 +58,7 @@ public class SecurityFilterChainInfoController implements ApplicationContextAwar
         for(String name : applicationContext.getBeanDefinitionNames()) {
             results.put(++i, name);
         }
+        results.put(++i, host);
         return results;
     }
 
@@ -71,4 +81,19 @@ public class SecurityFilterChainInfoController implements ApplicationContextAwar
         }
         return results;
     }
+
+    @RequestMapping("/controllers")
+    @ResponseBody
+    public Set<String> getAllControllers() {
+        Map<String, Object> controllers = applicationContext.getBeansWithAnnotation(RestController.class);
+        return controllers.keySet();
+    }
+
+    @RequestMapping("/javaSetting")
+    @ResponseBody
+    public String getJavaSetting() {
+        return this.javaSetting.toString();
+    }
+
+
 }
