@@ -1,0 +1,203 @@
+@startuml
+package "dependency relationShip" {
+package tenantLibrary {
+  mix_usecase (hue-tenant-saas) as tenant
+  mix_usecase (hue-tenant-dynamoDB-saas) as tenantDynamoDB
+  mix_usecase (hue-tenant-saas-for-lambda) as tenantLambda
+  mix_usecase (hue-tenant-saas-for-spring) as tenantSpring
+  tenantLambda --> tenant : dependes on
+  tenantLambda --> tenantDynamoDB : depends on
+  tenantSpring --> tenant : dependes on
+  tenantSpring --> tenantDynamoDB : depends on
+  tenantDynamoDB --> tenant : depends on
+}
+package textResourceLibrary {
+  mix_usecase (hue-text-resource-saas) as text
+  mix_usecase (hue-text-resource-dynamoDB-saas) as textDynamoDB
+  mix_usecase (hue-text-resource-saas-for-spring) as textSpring
+  textSpring --> text : depends on
+  textSpring --> textDynamoDB : depends on
+  text --> tenant : depends on
+  textDynamoDB --> text : depends on
+}
+}
+newpage
+package tenantManager{
+namespace hue.tenant.manager.saas {
+  interface TenantManager {
+    + Tenant getTenant()
+  }
+  interface TenantRegistry {
+    + Optional<Tenant> getTenantById(String id)
+    + Optional<Tenant> getTenantByDomainPrefix(String prefix)
+    + Set<String> getTenantRepoIds()
+    + List<Tenant> loadTenantRepo()
+  }
+  interface TenantDao {
+    + List<Tenant> getAllTenants()
+    + void insert(List<Tenant> tenants)
+  }
+  namespace entity {
+    class Landscape
+    class Tenant
+  }
+  class TenantRegistryImpl {
+    {field} - Map<String, Tenant> mapById
+    {field} - Map<String, Tenant> mapByPrefix
+    {field} - TenantDao dao
+    --Constructor--
+    {method} + TenantRegistryImpl(TenantDao dao) {initTenantRepoData(dao.getAllTenants)}
+    ..Methods..
+    {method} + Set<String> getTenantRepoIds(){return dao.getAllTenants;}
+  }
+  TenantRegistry <|-- TenantRegistryImpl
+  TenantRegistryImpl --> TenantDao : uses >
+}
+
+namespace hue.tenant.manager.dynamoDB.saas {
+  class TenantDaoDyanmoDBImpl {
+    {field} - AmazonDynamoDB client
+    --Constructor--
+    {method} + TenantDaoDyanmoDBImpl(AmazonDynamoDB client)
+  }
+  hue.tenant.manager.saas.TenantDao <|-- TenantDaoDyanmoDBImpl
+  class TenantDto
+  class DynamoDBMapperBuilder
+  class TenantItemConverter
+}
+
+namespace hue.tenant.manager.for.lambda {
+  class TenantManagerLambdaImpl {
+    {field} - Tenant tenant
+    --Constructor--
+    {method} + TenantManagerLambdaImpl(String host, TenantRegistry tenantRegistry)
+  }
+  class TenantDaoLambdaEnvVarImpl
+  hue.tenant.manager.saas.TenantManager <|-- TenantManagerLambdaImpl
+  hue.tenant.manager.saas.TenantDao <|-- TenantDaoLambdaEnvVarImpl
+  note bottom of TenantManagerLambdaImpl
+    <b>how to use TenantManagerLambdaImpl in lambda:(DynamoDB version)</b>
+    <i>TenantManager tenantManager = new TenantManagerLambdaImpl(host, </i>
+        <i>new TenantRegistryImpl(new TenantDaoDyanmoDBImpl(AmazonDynamoDBClient))</i>
+
+    <b>how to use TenantManagerLambdaImpl in lambda:(LambdaEnvVar version)</b>
+    <i>TenantManager tenantManager = new TenantManagerLambdaImpl(host, </i>
+        <i>new TenantRegistryImpl(new TenantDaoLambdaEnvVarImpl()) </i>
+  end note
+}
+
+namespace hue.tenant.manager.for.spring {
+  class TenantManagerFilter
+  interface TenantManagerInner
+  class TenantManagerInnerImpl
+  class TenantManagerSpringImpl {
+    {field} - TenantManagerInner inner
+    {method} + Tenant getTenant(){return inner.getTenant();}
+  }
+  class TenantDaoSpringLocalImpl
+  hue.tenant.manager.saas.TenantManager <|-- TenantManagerSpringImpl
+  TenantManagerInner <|-- TenantManagerInnerImpl
+  hue.tenant.manager.saas.TenantDao <|-- TenantDaoSpringLocalImpl
+
+  class TenantConfig
+  note bottom of TenantConfig
+    bean of TenantRegistry can be written as:
+        public TenantRegistry getTenantRegistry() {
+        	if(client == null) {
+        		return new TenantRegistryImpl(new TenantDaoSpringLocalImpl());
+        	}
+            return new TenantRegistryImpl(new TenantDaoDyanmoDBImpl(client));
+        }
+  end note
+  TenantConfig --> hue.tenant.manager.dynamoDB.saas.TenantDaoDyanmoDBImpl : uses >
+  TenantConfig --> TenantDaoSpringLocalImpl : uses >
+
+}
+}
+newpage
+package textresource{
+namespace hue.text.resource.saas {
+  namespace entity {
+    class TextId
+    class TextMap
+    class TextNestedMap
+    class TextResourceStoreEntity
+  }
+  namespace core {
+    class TextResourceException
+    interface TextResourceDao
+    interface TextResourceManager
+    class CoreTextResourceManagerImpl {
+      {field} -TenantManager tenantManager
+      {field} -TextResourceDao dao
+      --Constructor--
+      {method} +CoreTextResourceManager(TextResourceDao dao, TenantManager tenantManager)
+    }
+    class TextResourceManagerImpl {
+      {field} CoreTextResourceManager coreTextResourceManager
+      --Constructor--
+      {method} +TextResourceManagerImpl(TextResourceDao dao, TenantManager tenantManager)
+    }
+    interface CoreTextResourceManager {
+      + TextNestedMap getTextsWithMultipleLocale(Collection<TextId> textIds, Collection<Locale> locales)
+      + TextMap getTexts(Collection<TextId> textIds, @Nonnull Locale locale)
+      + TextMap getPluralTexts(Collection<TextId> textIds, @Nonnull Locale locale, String plural)
+      + void insert(List<TextResourceStoreEntity> entities)
+    }
+    TextResourceManager <|-- TextResourceManagerImpl
+    CoreTextResourceManager <|-- CoreTextResourceManagerImpl
+    TextResourceManagerImpl --> CoreTextResourceManager : uses >
+    CoreTextResourceManagerImpl --> TextResourceDao : uses >
+'    CoreTextResourceManagerImpl --> hue.tenant.manager.saas.TenantManager : uses >
+  }
+
+  namespace cache {
+    interface TextCacheDao
+    class TextResourceManagerWithCacheImpl {
+      {field} -TextResourceManager textResourceManager
+      {field} -TextCacheDao cacheDao
+      --Constructor--
+      {method} +TextResourceManagerWithCacheImpl(TextCacheDao cacheDao, TextResourceDao dao, TenantManager tenantManager)
+    }
+    hue.text.resource.saas.core.TextResourceManager <|-- TextResourceManagerWithCacheImpl
+    TextResourceManagerWithCacheImpl --> TextCacheDao : uses >
+  }
+}
+
+namespace hue.text.resource.dynamoDB.saas {
+  class TextResouceDaoDynamoDBImpl{
+    {field} -AmazonDynamoDB client
+    --Constructor--
+    {method} +TextResouceDaoImpl(AmazonDynamoDB client)
+  }
+  hue.text.resource.saas.core.TextResourceDao <|-- TextResouceDaoDynamoDBImpl
+  class TextResourceDefItem
+}
+
+namespace hue.text.resource.saas.for.spring {
+  class TextResourceController
+  class TextResourceConfiguration
+  note bottom of TextResourceConfiguration
+    The configuration can be written as following:
+    	@Bean
+    	@Autowired
+    	public TextResourceManager getTextResourceManager(AmazonDynamoDB client,
+    			TenantManager tenantManager) {
+    		return new TextResourceManagerImpl(new TextResouceDaoDynamoDBImpl(client), tenantManager);
+    	}
+  end note
+  TextResourceConfiguration --> hue.text.resource.saas.core.TextResourceManagerImpl : dependes on >
+  TextResourceConfiguration --> hue.text.resource.dynamoDB.saas.TextResouceDaoDynamoDBImpl : dependes on >
+}
+
+namespace hue.text.resource.cache.redis.saas {
+  class TextCacheRedisDaoImpl{
+    {field} -CacheManager cacheManager
+    --Constructor--
+    {method} +TextCacheRedisDaoImpl(CacheManager cacheManager)
+  }
+  hue.text.resource.saas.cache.TextCacheDao <|-- TextCacheRedisDaoImpl
+  note top of TextCacheRedisDaoImpl: It's only an example
+}
+}
+@enduml
