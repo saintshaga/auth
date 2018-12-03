@@ -1,8 +1,11 @@
 package cn.saintshaga.auth;
 
+import com.google.common.collect.Sets;
 import com.worksap.company.hue.security.config.AuthFilterConfiguration;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+
+import java.util.Set;
 
 /**
  * Created by huang on 18-10-24.
@@ -10,41 +13,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfig extends AuthFilterConfiguration {
+
+    @Override
+    protected Set<String> getCsrfAllowedMethods() {
+        return Sets.newHashSet("GET", "HEAD", "TRACE", "OPTIONS", "DELETE", "POST");
+    }
 }
-//public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
-//    private static final String[] PERMIT_REQUESTS = new String[] {
-//            "/error",
-//            "/favicon.ico",
-//            "/systemInfo/**",
-//            "/logout",
-//            "/**/*.html",
-//            "/**/*.js",
-//            "/**/*.css",
-//            "/img/**"
-//    };
-//    /**
-//     * Allow sub class to configure which urls are allowed to no authenticated.
-//     * For those urls, they can be accessed directly without any authentication.
-//     * Those urls will also be ignored in the customized filter {@link CollabCallHueNativeAuthenticationFilter}.
-//     */
-//    protected String[] getPermitRequests() {
-//        return PERMIT_REQUESTS;
-//    }
-//
-//    @Override
-//    protected void configure(HttpSecurity http) throws Exception {
-//        http
-//                .authorizeRequests().antMatchers(getPermitRequests()).permitAll()
-//                .anyRequest().authenticated()
-//                .and().formLogin()
-//        ;
-//    }
-//
-//    @Bean
-//    public UserDetailsService userDetailsService() {
-//        InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
-//        manager.createUser(User.withDefaultPasswordEncoder().username("user").password("password").roles("USER").build());
-//        return manager;
-//    }
-//
-//}
